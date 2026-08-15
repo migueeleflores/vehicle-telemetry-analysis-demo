@@ -27,13 +27,28 @@ def calculate_lap_time(lap: pd.DataFrame) -> float:
     return float(lap["time_s"].iloc[-1] + final_interval)
 
 
+def calculate_lap_distance(lap: pd.DataFrame) -> float:
+    """Estimate total lap distance including the final sampled segment."""
+    if len(lap) < 2:
+        raise ValueError("At least two telemetry samples are required.")
+    final_interval = float(lap["distance_m"].iloc[-1] - lap["distance_m"].iloc[-2])
+    return float(lap["distance_m"].iloc[-1] - lap["distance_m"].iloc[0] + final_interval)
+
+
+def calculate_average_speed(lap: pd.DataFrame) -> float:
+    """Return physical average speed from total distance divided by total elapsed time."""
+    lap_time_s = calculate_lap_time(lap)
+    lap_distance_m = calculate_lap_distance(lap)
+    return float((lap_distance_m / lap_time_s) * 3.6)
+
+
 def calculate_metrics(lap: pd.DataFrame) -> LapMetrics:
     """Calculate a compact set of driver- and vehicle-facing lap metrics."""
     lap_name = str(lap["lap"].iloc[0])
     return LapMetrics(
         lap=lap_name,
         lap_time_s=calculate_lap_time(lap),
-        average_speed_kmh=float(lap["speed_kmh"].mean()),
+        average_speed_kmh=calculate_average_speed(lap),
         minimum_speed_kmh=float(lap["speed_kmh"].min()),
         maximum_speed_kmh=float(lap["speed_kmh"].max()),
         braking_fraction=float((lap["brake"] > 0.05).mean()),
